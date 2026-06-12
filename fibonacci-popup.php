@@ -1,0 +1,342 @@
+<?php
+/**
+ * Plugin Name: پاپ‌آپ فیبوناچی با آمار کلیک
+ * Description: نمایش پاپ‌آپ با پیشنهاد ۵۰۰ سکه + ثبت کلیک جداگانه برای مایکت و کافه‌بازار
+ * Version: 3.0
+ * Author: YourName
+ */
+
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+// ========== ثبت کلیک ها ==========
+function fibonacci_track_click() {
+    if (!isset($_GET['fibonacci_track']) || !isset($_GET['market'])) {
+        return;
+    }
+    
+    $market = sanitize_text_field($_GET['market']);
+    if (!in_array($market, ['myket', 'bazaar'])) {
+        return;
+    }
+    
+    // دریافت آمار فعلی
+    $stats = get_option('fibonacci_click_stats', ['myket' => 0, 'bazaar' => 0]);
+    
+    // افزایش شمارنده
+    $stats[$market]++;
+    
+    // ذخیره آمار جدید
+    update_option('fibonacci_click_stats', $stats);
+    
+    // ریدایرکت به مارکت واقعی
+    if ($market === 'myket') {
+        wp_redirect('https://myket.ir/app/ai.fibonacci.ir');
+    } else {
+        wp_redirect('https://cafebazaar.ir/app/ai.fibonacci.ir');
+    }
+    exit;
+}
+add_action('init', 'fibonacci_track_click');
+
+// ========== نمایش پاپ آپ ==========
+add_action('wp_footer', 'fibonacci_popup_display_v3');
+
+function fibonacci_popup_display_v3() {
+    if (current_user_can('administrator')) {
+        return;
+    }
+    
+    if (isset($_COOKIE['fibonacci_popup_closed_v3'])) {
+        return;
+    }
+    ?>
+    
+    <style>
+        #fibonacci-popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(5px);
+            z-index: 999999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: inherit;
+        }
+        
+        .fibonacci-popup-container {
+            background: linear-gradient(135deg, #1a2a36, #0e1620);
+            max-width: 500px;
+            width: 90%;
+            border-radius: 32px;
+            padding: 30px 25px;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.6);
+            animation: fadeInUp 0.4s ease-out;
+            border: 1px solid rgba(255,200,0,0.3);
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes coinRain {
+            0% { transform: scale(0) rotate(0deg); opacity: 0; }
+            60% { transform: scale(1.2) rotate(12deg); }
+            100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+        
+        .coin-animation {
+            display: inline-block;
+            animation: coinRain 0.5s ease-out;
+            font-size: 52px;
+            margin-bottom: 5px;
+        }
+        
+        .fibonacci-popup-container h2 {
+            color: #FFD700;
+            margin: 5px 0 10px;
+            font-size: 1.8rem;
+            font-weight: bold;
+        }
+        
+        .offer-badge {
+            background: rgba(255,215,0,0.12);
+            padding: 12px;
+            border-radius: 60px;
+            margin: 15px 0;
+            border: 1px solid rgba(255,215,0,0.4);
+        }
+        
+        .offer-text {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #FFD700;
+            margin: 0;
+        }
+        
+        .offer-sub {
+            color: #ccc;
+            font-size: 0.75rem;
+            margin-top: 5px;
+        }
+        
+        .fibonacci-popup-container p {
+            color: #e0e0e0;
+            margin-bottom: 20px;
+            line-height: 1.5;
+            font-size: 0.9rem;
+        }
+        
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: center;
+            margin: 20px 0 15px;
+        }
+        
+        .download-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #2c3e50;
+            color: white;
+            text-decoration: none;
+            padding: 10px 22px;
+            border-radius: 40px;
+            font-weight: bold;
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        
+        .download-btn:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.05);
+        }
+        
+        .myket-btn {
+            background: #27ae60;
+            box-shadow: 0 4px 12px rgba(39,174,96,0.3);
+        }
+        
+        .bazaar-btn {
+            background: #2980b9;
+            box-shadow: 0 4px 12px rgba(41,128,185,0.3);
+        }
+        
+        .fibonacci-close-btn {
+            position: absolute;
+            top: 12px;
+            right: 18px;
+            font-size: 28px;
+            cursor: pointer;
+            color: #aaa;
+            transition: color 0.2s;
+        }
+        
+        .fibonacci-close-btn:hover {
+            color: #FFD700;
+        }
+        
+        .fibonacci-remind {
+            display: block;
+            margin-top: 15px;
+            color: #bbb;
+            font-size: 11px;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+        
+        .fibonacci-remind:hover {
+            color: #FFD700;
+        }
+    </style>
+    
+    <div id="fibonacci-popup-overlay">
+        <div class="fibonacci-popup-container">
+            <span class="fibonacci-close-btn" onclick="fibonacciClosePopupV3(true)">&times;</span>
+            
+            <div class="coin-animation">🪙✨🎁</div>
+            <h2>شروع با ۵۰۰ سکه رایگان!</h2>
+            
+            <div class="offer-badge">
+                <div class="offer-text">هدیه خوش‌آمدگویی ویژه</div>
+                <div class="offer-sub">فقط برای کاربران جدید اپلیکیشن فیبوناچی</div>
+            </div>
+            
+            <p>
+                <strong>🤖 هوش مصنوعی ایرانی فیبوناچی</strong><br>
+                چت، تولید عکس، کدنویسی و مقاله با سریع‌ترین سرعت<br>
+                <span style="color:#FFD700;">✅ بدون فیلترشکن</span> | <span style="color:#FFD700;">🎨 تولید تصویر</span>
+            </p>
+            
+            <div class="button-group">
+                <a href="<?php echo esc_url(add_query_arg(['fibonacci_track' => '1', 'market' => 'myket'], home_url('/'))); ?>" class="download-btn myket-btn">
+                    📲 دریافت از مایکت
+                </a>
+                <a href="<?php echo esc_url(add_query_arg(['fibonacci_track' => '1', 'market' => 'bazaar'], home_url('/'))); ?>" class="download-btn bazaar-btn">
+                    📦 دریافت از کافه‌بازار
+                </a>
+            </div>
+            
+            <span class="fibonacci-remind" onclick="fibonacciClosePopupV3(false)">
+                🔔 بعداً یادآوری کن (۵۰۰ سکه منتظر شماست)
+            </span>
+        </div>
+    </div>
+    
+    <script>
+        function fibonacciClosePopupV3(setCookie = true) {
+            document.getElementById('fibonacci-popup-overlay').style.display = 'none';
+            if (setCookie) {
+                var expires = new Date();
+                expires.setTime(expires.getTime() + (3 * 24 * 60 * 60 * 1000));
+                document.cookie = "fibonacci_popup_closed_v3=1; expires=" + expires.toUTCString() + "; path=/";
+            }
+        }
+        
+        document.getElementById('fibonacci-popup-overlay').addEventListener('click', function(e) {
+            if (e.target === this) {
+                fibonacciClosePopupV3(true);
+            }
+        });
+    </script>
+    
+    <?php
+}
+
+// ========== پنل آمار در پیشخوان وردپرس ==========
+add_action('admin_menu', 'fibonacci_stats_menu');
+
+function fibonacci_stats_menu() {
+    add_menu_page(
+        'آمار کلیک فیبوناچی',
+        'آمار فیبوناچی',
+        'manage_options',
+        'fibonacci-stats',
+        'fibonacci_stats_page',
+        'dashicons-chart-bar',
+        75
+    );
+}
+
+function fibonacci_stats_page() {
+    $stats = get_option('fibonacci_click_stats', ['myket' => 0, 'bazaar' => 0]);
+    $total = $stats['myket'] + $stats['bazaar'];
+    ?>
+    <div class="wrap" style="direction: rtl; font-family: inherit;">
+        <h1>📊 آمار کلیک پاپ‌آپ فیبوناچی</h1>
+        
+        <div style="background: #f5f5f5; padding: 20px; border-radius: 16px; margin-top: 20px; max-width: 600px;">
+            <h2>از زمان فعالسازی افزونه:</h2>
+            
+            <div style="background: white; padding: 15px; border-radius: 12px; margin: 15px 0;">
+                <p style="font-size: 1.2rem;">🎯 <strong>کلیک روی دکمه مایکت:</strong> 
+                <span style="color: #27ae60; font-size: 1.8rem; font-weight: bold;"><?php echo intval($stats['myket']); ?></span></p>
+                
+                <p style="font-size: 1.2rem;">📦 <strong>کلیک روی دکمه کافه‌بازار:</strong> 
+                <span style="color: #2980b9; font-size: 1.8rem; font-weight: bold;"><?php echo intval($stats['bazaar']); ?></span></p>
+                
+                <hr>
+                <p style="font-size: 1.3rem;">🔢 <strong>مجموع کلیک‌ها:</strong> 
+                <span style="color: #e67e22; font-size: 2rem; font-weight: bold;"><?php echo intval($total); ?></span></p>
+            </div>
+            
+            <?php if ($total > 0): ?>
+                <div style="background: #eef2f3; padding: 15px; border-radius: 12px;">
+                    <p>📈 <strong>درصد محبوبیت:</strong></p>
+                    <ul>
+                        <li>مایکت: <?php echo round(($stats['myket'] / $total) * 100, 1); ?>%</li>
+                        <li>کافه‌بازار: <?php echo round(($stats['bazaar'] / $total) * 100, 1); ?>%</li>
+                    </ul>
+                </div>
+            <?php endif; ?>
+            
+            <p style="color: #666; margin-top: 20px; font-size: 0.8rem;">
+                ⚠️ توجه: این آمار فقط کلیک روی دکمه‌های داخل پاپ‌آپ را ثبت می‌کند.
+                <br>
+                برای بازنشانی آمار، افزونه را غیرفعال و دوباره فعال کنید.
+            </p>
+        </div>
+    </div>
+    <?php
+}
+
+// ========== اضافه کردن ستون آمار به داشبورد وردپرس (ویجت) ==========
+add_action('wp_dashboard_setup', 'fibonacci_dashboard_widget');
+
+function fibonacci_dashboard_widget() {
+    wp_add_dashboard_widget(
+        'fibonacci_stats_widget',
+        '📱 آمار کلیک پاپ‌آپ فیبوناچی',
+        'fibonacci_dashboard_widget_content'
+    );
+}
+
+function fibonacci_dashboard_widget_content() {
+    $stats = get_option('fibonacci_click_stats', ['myket' => 0, 'bazaar' => 0]);
+    $total = $stats['myket'] + $stats['bazaar'];
+    echo "<p style='direction:rtl; text-align:right;'>";
+    echo "✅ کلیک مایکت: <strong>{$stats['myket']}</strong><br>";
+    echo "✅ کلیک کافه‌بازار: <strong>{$stats['bazaar']}</strong><br>";
+    echo "🔢 مجموع: <strong>{$total}</strong><br>";
+    echo "<a href='admin.php?page=fibonacci-stats'>مشاهده آمار کامل →</a>";
+    echo "</p>";
+}
+?>
